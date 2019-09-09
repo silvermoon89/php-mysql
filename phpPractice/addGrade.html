@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>添加学生成绩</title>
+    <style>
+        .cover {
+            position: fixed;
+            top: 0;
+            left: 0;
+            display: none;
+            width: 100%;
+            height: 100%;
+            z-index: 5;
+            background: #5f5f5f;
+            opacity: 0.6;
+        }
+
+        .table {
+            width: 400px;
+            margin-top: 30px;
+        }
+
+        .table th {
+            width: 25%;
+            height: 30px;
+            line-height: 30px;
+        }
+
+        .table td {
+            text-align: center;
+            height: 30px;
+            line-height: 30px;
+        }
+
+        .table td button {
+            width: 50%;
+            height: 100%;
+        }
+
+        .loading {
+            width: 100px;
+            display: none;
+        }
+
+        .nodata {
+            width: 400px;
+            text-align: center;
+        }
+
+        .edit {
+            position: fixed;
+            left: 35%;
+            top: 30%;
+            display: none;
+            width: 400px;
+            height: 300px;
+            border: 1px solid #ffc08f;
+            box-shadow: 2px 2px 10px #ffc08f;
+            background: #ffffff;
+            z-index: 10;
+        }
+
+        .edit-title {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            font-size: 14px;
+            color: #bbbbbb;
+            text-decoration: underline;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="cover" onclick="hide()"></div>
+    <div class="info" style="width:200px;margin:0 auto;">
+        <div>姓名：</div>
+        <input type="text" name="name" placeholder="请输入姓名" />
+        <div>学科：</div>
+        <input type="text" name="subject" placeholder="请输入学科" />
+        <div>成绩：</div>
+        <input type="text" name="score" placeholder="请输入成绩" />
+        <div>
+            <button id="submit" style="width: 170px;height:40px;margin-top: 30px;">提交</button>
+        </div>
+    </div>
+    <hr />
+    <div style="width:500px;margin:0 auto;">
+        <div>
+            <input type="text" name="search" />
+            <button id="search" style="width: 100px;margin-left: 30px;" onclick="searchGrade()">查询</button>
+        </div>
+        <div>
+            <table class="table" border="1">
+                <tr>
+                    <th>姓名</th>
+                    <th>学科</th>
+                    <th>成绩</th>
+                    <th>操作</th>
+                </tr>
+            </table>
+            <div class="nodata">暂无数据</div>
+        </div>
+    </div>
+
+    <div class="edit">
+        <div class="edit-title"><i>修改数据</i></div>
+        <div style="width:180px;height: 200px;margin:0 auto;padding:10px 10px;margin-top: 40px;">
+            <div>姓名：</div>
+            <input type="text" name="edit-name" placeholder="请输入姓名" />
+            <div>学科：</div>
+            <input type="text" name="edit-subject" placeholder="请输入学科" />
+            <div>成绩：</div>
+            <input type="text" name="edit-score" placeholder="请输入成绩" />
+            <div>
+                <button id="edit-submit" style="width: 170px;height:40px;margin-top: 30px;"
+                    onclick="update()">修改</button>
+            </div>
+        </div>
+    </div>
+
+</body>
+<script src="http://code.jquery.com/jquery-2.1.1.min.js"></script>
+<script>
+    var add = document.getElementById('submit');
+    var editId = '';
+
+    add.onclick = function () {
+        var name = $('input[name="name"]').val();
+        var subject = $('input[name="subject"]').val();
+        var score = $('input[name="score"]').val();
+        var addData = {
+            "name": name,
+            "subject": subject,
+            "score": score
+        }
+        console.log(addData);
+
+        if (name == '') {
+            alert("请填写学生姓名");
+            return;
+        }
+        if (subject == '') {
+            alert("请填写考试学科");
+            return;
+        }
+
+
+        //清空输入框
+        $('input[name="name"]').val('');
+        $('input[name="subject"]').val('');
+        $('input[name="score"]').val('');
+
+        $.ajax({
+            url: 'add.php',
+            type: 'POST',
+            data: addData
+        })
+            .done(res => {
+                console.log(JSON.parse(res));
+                if (JSON.parse(res).status == "success") {
+                    alert("写入数据库成功！");
+                } else {
+                    alert("写入数据库失败！");
+                }
+            })
+            .fail(e => {
+                alert("写入数据库失败！"+e);
+                console.log(e);
+            })
+    }
+
+    function searchGrade() {
+        $('.table').html('');
+        $('.table').append("<tr><th>姓名</th><th>学科</th><th>成绩</th><th>操作</th></tr>");
+        $('#search').html("正在查询...");
+        $('#search').attr("disabled", true);
+
+        var searchData = {
+            "search": $('input[name="search"]').val()
+        };
+        $.ajax({
+            url: 'search.php',
+            type: 'POST',
+            data: searchData
+        })
+            .done(res => {
+                console.log(res);
+                $('#search').html("查询");
+                $('#search').attr("disabled", false);
+
+                let all_data = JSON.parse(res);
+                if (all_data && all_data.length > 0) {
+                    $('.nodata').css('display', 'none');
+                    all_data.map(item => {
+                        var child = "<tr><td>" + item[1] + "</td><td>" + item[2] + "</td><td>" + item[3] + "</td><td><button onclick=delData('" + item[0] + "')>删除</button><button onclick=showEdit('" + item + "')>修改</button></td></tr>";
+                        $('.table').append(child);
+                    })
+                } else {
+                    $('.nodata').css('display', 'block');
+                    $('.nodata').html("未查询到数据");
+                }
+            })
+            .fail(e => {
+                console.log(e);
+            })
+    }
+
+    function delData(id) {
+        $.ajax({
+            url: 'delete.php',
+            type: 'POST',
+            data: { "id": id }
+        })
+            .done(res => {
+                if (JSON.parse(res).status == "success") {
+                    alert("删除数据成功！");
+                    searchGrade();
+                } else {
+                    alert("删除数据失败！");
+                }
+            })
+            .fail(e => {
+                alert("删除数据失败！"+e);
+                console.log(e);
+            })
+    }
+
+    function showEdit(item) {
+        let data = item.split(',');
+        console.log(data);
+        $('.cover').show();
+        $('.edit').show();
+        editId = data[0];
+        $('input[name="edit-name"]').val(data[1]);
+        $('input[name="edit-subject"]').val(data[2]);
+        $('input[name="edit-score"]').val(data[3]);
+    }
+
+    function update() {
+        var editName = $('input[name="edit-name"]').val();
+        var editSubject = $('input[name="edit-subject"]').val();
+        var editScore = $('input[name="edit-score"]').val();
+        var updateData = {
+            "id": editId,
+            "name": editName,
+            "subject": editSubject,
+            "score": editScore
+        }
+
+        if (editName == '') {
+            alert("请填写学生姓名");
+            return;
+        }
+        if (editSubject == '') {
+            alert("请填写考试学科");
+            return;
+        }
+
+        $.ajax({
+            url: 'update.php',
+            type: 'POST',
+            data: updateData
+        })
+            .done(res => {
+                console.log(JSON.parse(res));
+
+                $('.cover').hide();
+                $('.edit').hide();
+                if (JSON.parse(res).status == "success") {
+                    alert("数据修改成功！");
+                    searchGrade();
+                } else {
+                    alert("数据修改失败！");
+                }
+            })
+            .fail(e => {
+                alert("数据修改失败！"+e);
+                console.log(e);
+            })
+    }
+
+    function hide() {
+        $('.cover').hide();
+        $('.edit').hide();
+    }
+</script>
+
+</html>
